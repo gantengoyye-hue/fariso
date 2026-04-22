@@ -10,50 +10,44 @@ const root = process.cwd();
 async function startServer() {
   const app = express();
   const PORT = 3000;
+  const isProd = process.env.NODE_ENV === 'production';
 
-  console.log(`[SERVER] Initializing Exalance in ${process.env.NODE_ENV || 'development'} mode`);
+  console.log(`[SERVER] Initializing Exalance in ${process.env.NODE_ENV || 'production (default)'} mode`);
 
   // Health check
   app.get('/api/health', (req, res) => {
     res.json({ 
       status: 'ok', 
-      mode: process.env.NODE_ENV,
-      version: '1.0.4-unified-fallback',
+      mode: process.env.NODE_ENV || 'production (defaulted)',
+      version: '1.0.5-explicit-prod',
       timestamp: new Date().toISOString(),
       cwd: process.cwd()
     });
   });
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (!isProd) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: 'custom',
+      appType: 'spa', // Changed to spa for automatic fallback handling
     });
     
     app.use(vite.middlewares);
-
-    app.get('*', async (req, res, next) => {
-      const url = req.originalUrl;
-      if (url.includes('.') && !url.endsWith('.html')) return next();
-
-      try {
-        const templatePath = path.resolve(root, 'index.html');
-        let template = fs.readFileSync(templatePath, 'utf-8');
-        template = await vite.transformIndexHtml(url, template);
-        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
-      } catch (e) {
-        vite.ssrFixStacktrace(e as Error);
-        next(e);
-      }
-    });
   } else {
     // Production
     const distPath = path.resolve(root, 'dist');
+    
+    // Serve static files first
     app.use(express.static(distPath));
     
+    // SPA Fallback for all other routes
     app.get('*', (req, res) => {
-      res.sendFile(path.resolve(distPath, 'index.html'));
+      const indexPath = path.resolve(distPath, 'index.html');
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        res.status(404).send('Production build not found. Running build first might help.');
+      }
     });
   }
 
