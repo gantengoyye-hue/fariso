@@ -14,21 +14,41 @@ async function startServer() {
   const isProd = mode === 'production';
 
   console.log(`[INIT] Starting server in "${mode}" mode`);
+  console.log(`[INIT] Current working directory: ${process.cwd()}`);
+  console.log(`[INIT] DISABLE_HMR: ${process.env.DISABLE_HMR}`);
+
+  // Request logger
+  app.use((req, res, next) => {
+    console.log(`[REQ] ${req.method} ${req.url}`);
+    next();
+  });
 
   // Health check
   app.get('/api/health', (req, res) => {
+    const distPath = path.resolve(root, 'dist');
+    let distFiles: string[] = [];
+    if (fs.existsSync(distPath)) {
+      distFiles = fs.readdirSync(distPath);
+    }
+
     res.json({ 
       status: 'ok', 
       mode: process.env.NODE_ENV,
-      version: '1.0.6-spa-fix',
-      timestamp: new Date().toISOString()
+      version: '1.0.8-file-list',
+      timestamp: new Date().toISOString(),
+      cwd: process.cwd(),
+      distExists: fs.existsSync(distPath),
+      distFiles
     });
   });
 
   if (!isProd) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { 
+        middlewareMode: true,
+        hmr: false, // Explicitly disable HMR
+      },
       appType: 'custom',
     });
     
