@@ -70,29 +70,32 @@ async function startServer() {
     });
   } else {
     // Production (Shared App)
-    // When bundled, dist/server.js is inside the dist folder
-    // When running via tsx, server.ts is in root
-    const isBundled = __dirname.endsWith('dist');
-    const distPath = isBundled ? __dirname : path.resolve(root, 'dist');
+    // Robust dist path resolution
+    const distPath = path.resolve(root, 'dist');
     
+    console.log(`[INIT] Mode: Production`);
+    console.log(`[INIT] Root: ${root}`);
     console.log(`[INIT] Serving static files from: ${distPath}`);
     
     // Serve static files (assets, etc)
-    app.use(express.static(distPath, {
-      index: false // We handle index via catch-all for SPA fallback
-    }));
+    // We serve assets first, but for index.html we want the fallback logic
+    app.use(express.static(distPath, { index: false }));
     
     // SPA Fallback for all other routes
     app.get('*', (req, res) => {
       // Skip API routes
-      if (req.url.startsWith('/api')) return res.status(404).json({ error: 'API not found' });
+      if (req.url.startsWith('/api')) {
+        console.warn(`[404] API route not found: ${req.url}`);
+        return res.status(404).json({ error: 'API route not found' });
+      }
 
       const indexPath = path.resolve(distPath, 'index.html');
+      
       if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
       } else {
-        console.error(`[404-FALLBACK] index.html not found at: ${indexPath} for URL: ${req.url}`);
-        res.status(404).send('Production build not found. Please ensure "npm run build" was successful.');
+        console.error(`[CRITICAL] index.html MISSING at: ${indexPath}`);
+        res.status(404).send('Application is booting or build is incomplete. Please try again in 30 seconds.');
       }
     });
   }
