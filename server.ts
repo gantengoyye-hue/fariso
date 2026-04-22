@@ -34,7 +34,7 @@ async function startServer() {
     res.json({ 
       status: 'ok', 
       mode: process.env.NODE_ENV,
-      version: '1.0.8-file-list',
+      version: '1.0.9-bundled',
       timestamp: new Date().toISOString(),
       cwd: process.cwd(),
       distExists: fs.existsSync(distPath),
