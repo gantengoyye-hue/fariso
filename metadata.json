@@ -1,0 +1,6 @@
+{
+  "name": "Exalance",
+  "description": "Sistem Manajemen Ujian Online Modern untuk SMK Prima Unggul. Mendukung peran Admin, Guru, dan Siswa dengan koreksi otomatis dan rekap nilai realtime.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["auth", "database", "realtime"]
+}
