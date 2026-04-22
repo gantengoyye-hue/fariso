@@ -16,7 +16,8 @@ export default defineConfig(({mode}) => {
         name: 'nuke-vite-client',
         transformIndexHtml(html) {
           if (isHmrDisabled) {
-            return html.replace(/<script type="module" src="\/@vite\/client"><\/script>/g, '');
+            // Match any script tag that tries to load @vite/client with variations in quotes or spaces
+            return html.replace(/<script\s+type=["']module["']\s+src=["']\/@vite\/client["']><\/script>/g, '');
           }
           return html;
         }
