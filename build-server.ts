@@ -5,8 +5,8 @@ async function build() {
     entryPoints: ['server.ts'],
     bundle: true,
     platform: 'node',
-    outfile: 'dist/server.cjs',
-    format: 'cjs',
+    outfile: 'dist/server.js', // Changed to .js for ESM
+    format: 'esm', // Use ESM
     external: ['vite'], // vite is only used in dev
   });
 }
