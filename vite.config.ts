@@ -34,5 +34,6 @@ export default defineConfig(({mode}) => {
       hmr: false,
       watch: null,
     },
+    appType: 'spa',
   };
 });

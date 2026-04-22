@@ -69,20 +69,30 @@ async function startServer() {
       }
     });
   } else {
-    // Production
-    const distPath = path.resolve(root, 'dist');
+    // Production (Shared App)
+    // When bundled, dist/server.js is inside the dist folder
+    // When running via tsx, server.ts is in root
+    const isBundled = __dirname.endsWith('dist');
+    const distPath = isBundled ? __dirname : path.resolve(root, 'dist');
     
-    // Serve static files first
-    app.use(express.static(distPath));
+    console.log(`[INIT] Serving static files from: ${distPath}`);
+    
+    // Serve static files (assets, etc)
+    app.use(express.static(distPath, {
+      index: false // We handle index via catch-all for SPA fallback
+    }));
     
     // SPA Fallback for all other routes
     app.get('*', (req, res) => {
+      // Skip API routes
+      if (req.url.startsWith('/api')) return res.status(404).json({ error: 'API not found' });
+
       const indexPath = path.resolve(distPath, 'index.html');
       if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
       } else {
-        console.error(`[404-FALLBACK] File not found: ${indexPath} for URL: ${req.url}`);
-        res.status(404).send('Production build not found. Running build first might help.');
+        console.error(`[404-FALLBACK] index.html not found at: ${indexPath} for URL: ${req.url}`);
+        res.status(404).send('Production build not found. Please ensure "npm run build" was successful.');
       }
     });
   }
