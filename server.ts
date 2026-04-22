@@ -10,18 +10,18 @@ const root = process.cwd();
 async function startServer() {
   const app = express();
   const PORT = 3000;
-  const isProd = process.env.NODE_ENV === 'production';
+  const mode = process.env.NODE_ENV || 'production';
+  const isProd = mode === 'production';
 
-  console.log(`[SERVER] Initializing Exalance in ${process.env.NODE_ENV || 'production (default)'} mode`);
+  console.log(`[INIT] Starting server in "${mode}" mode`);
 
   // Health check
   app.get('/api/health', (req, res) => {
     res.json({ 
       status: 'ok', 
-      mode: process.env.NODE_ENV || 'production (defaulted)',
-      version: '1.0.5-explicit-prod',
-      timestamp: new Date().toISOString(),
-      cwd: process.cwd()
+      mode: process.env.NODE_ENV,
+      version: '1.0.6-spa-fix',
+      timestamp: new Date().toISOString()
     });
   });
 
@@ -29,10 +29,25 @@ async function startServer() {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: 'spa', // Changed to spa for automatic fallback handling
+      appType: 'custom',
     });
     
     app.use(vite.middlewares);
+
+    app.get('*', async (req, res, next) => {
+      const url = req.originalUrl;
+      if (url.startsWith('/api')) return next();
+
+      try {
+        const templatePath = path.resolve(root, 'index.html');
+        let template = fs.readFileSync(templatePath, 'utf-8');
+        template = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+      } catch (e) {
+        vite.ssrFixStacktrace(e as Error);
+        next(e);
+      }
+    });
   } else {
     // Production
     const distPath = path.resolve(root, 'dist');
@@ -46,13 +61,14 @@ async function startServer() {
       if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
       } else {
+        console.error('[ERROR] Production build not found at:', indexPath);
         res.status(404).send('Production build not found. Running build first might help.');
       }
     });
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[SERVER] Exalance listening on http://0.0.0.0:${PORT}`);
+    console.log(`[READY] Server running on http://0.0.0.0:${PORT}`);
   });
 }
 
