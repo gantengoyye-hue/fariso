@@ -81,7 +81,7 @@ async function startServer() {
       if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
       } else {
-        console.error('[ERROR] Production build not found at:', indexPath);
+        console.error(`[404-FALLBACK] File not found: ${indexPath} for URL: ${req.url}`);
         res.status(404).send('Production build not found. Running build first might help.');
       }
     });
